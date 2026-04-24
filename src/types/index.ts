@@ -20,6 +20,31 @@ export interface Product {
   updated_at: string;
 }
 
+export interface ProductCreateInput {
+  name: string;
+  price: number;
+  barcode?: string;
+  sku?: string;
+  gst_percent?: number;
+  stock?: number;
+}
+
+export interface ProductUpdateInput {
+  name?: string;
+  price?: number;
+  barcode?: string;
+  sku?: string;
+  gst_percent?: number;
+  stock?: number;
+}
+
+export interface ProductSearchParams {
+  q?: string;
+  barcode?: string;
+  sku?: string;
+}
+
+
 export interface Customer {
   customer_uuid: string;
   name: string;

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { runMigrations } from './database/migrations/001_initial';
 import authRoutes from './routes/auth';
+import productRoutes from './routes/products';
 
 // Load environment variables
 dotenv.config();
@@ -20,11 +21,24 @@ app.use(express.urlencoded({ extended: true }));
 runMigrations();
 
 // Routes
-app.use('/api', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'POS Billing API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products'
+    }
+  });
 });
 
 // 404 handler
