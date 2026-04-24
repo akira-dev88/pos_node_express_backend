@@ -122,4 +122,20 @@ Get Customer Summary
 curl -X GET http://localhost:3000/api/customers/summary \
   -H "Authorization: Bearer YOUR_TOKEN"
 
-  
+
+Dashboard
+
+curl -X GET http://localhost:3000/api/reports/dashboard \
+  -H "Authorization: Bearer YOUR_TOKEN"
+Sales Trend
+
+curl -X GET http://localhost:3000/api/reports/sales-trend \
+  -H "Authorization: Bearer YOUR_TOKEN"
+Profit Report
+
+curl -X GET http://localhost:3000/api/reports/profit \
+  -H "Authorization: Bearer YOUR_TOKEN"
+Stock Report
+
+curl -X GET http://localhost:3000/api/reports/stock \
+  -H "Authorization: Bearer YOUR_TOKEN"

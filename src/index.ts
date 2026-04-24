@@ -12,6 +12,7 @@ import settingsRoutes from './routes/settings';
 import customerRoutes from './routes/customers';
 import purchaseRoutes from './routes/purchases';
 import supplierRoutes from './routes/suppliers';
+import reportRoutes from './routes/reports'; // Add this import
 
 // Load environment variables
 dotenv.config();
@@ -28,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 // Run database migrations
 runMigrations();
 
+// Routes - matching PHP API structure
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/carts', cartRoutes);
@@ -36,13 +38,14 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/reports', reportRoutes); // Add this route
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint
+// Root endpoint with API documentation
 app.get('/', (req, res) => {
   res.json({ 
     message: 'POS Billing API',
@@ -55,7 +58,8 @@ app.get('/', (req, res) => {
       settings: '/api/settings',
       customers: '/api/customers',
       purchases: '/api/purchases',
-      suppliers: '/api/suppliers'
+      suppliers: '/api/suppliers',
+      reports: '/api/reports'
     }
   });
 });
@@ -74,13 +78,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📋 API Routes:`);
-  console.log(`   - POST   /api/suppliers`);
-  console.log(`   - GET    /api/suppliers`);
-  console.log(`   - PUT    /api/suppliers/:supplier_uuid`);
-  console.log(`   - DELETE /api/suppliers/:supplier_uuid`);
-  console.log(`   - POST   /api/purchases`);
-  console.log(`   - GET    /api/purchases`);
+  console.log(`📊 Reports API at http://localhost:${PORT}/api/reports`);
+  console.log(`\n📋 Available Report Endpoints:`);
+  console.log(`   - GET /api/reports/dashboard`);
+  console.log(`   - GET /api/reports/top-products`);
+  console.log(`   - GET /api/reports/stock`);
+  console.log(`   - GET /api/reports/profit`);
+  console.log(`   - GET /api/reports/sales-trend`);
+  console.log(`   - GET /api/reports/profit-trend`);
 });
 
 export default app;
