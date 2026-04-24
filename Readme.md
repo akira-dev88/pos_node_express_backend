@@ -61,3 +61,33 @@ curl -X POST http://localhost:3000/api/products/bulk \
       {"name": "Product B", "price": 20.99}
     ]
   }'
+
+  Create Cart
+bash
+curl -X POST http://localhost:3000/api/carts \
+  -H "Authorization: Bearer YOUR_TOKEN"
+Add Item to Cart
+bash
+curl -X POST http://localhost:3000/api/carts/CART_UUID/items \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "product_uuid": "PRODUCT_UUID",
+    "quantity": 2
+  }'
+Get Cart with Items and Summary
+bash
+curl -X GET http://localhost:3000/api/carts/CART_UUID \
+  -H "Authorization: Bearer YOUR_TOKEN"
+Apply Bill Discount
+bash
+curl -X POST http://localhost:3000/api/carts/CART_UUID/discount \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "discount": 10.00
+  }'
+Hold Cart
+bash
+curl -X POST http://localhost:3000/api/carts/CART_UUID/hold \
+  -H "Authorization: Bearer YOUR_TOKEN"

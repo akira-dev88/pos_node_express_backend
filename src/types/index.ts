@@ -154,7 +154,7 @@ export interface Setting {
 
 export interface Cart {
   cart_uuid: string;
-  status: 'active' | 'completed' | 'cancelled';
+  status: 'active' | 'held' | 'completed' | 'cancelled';
   discount: number;
   created_at: string;
   updated_at: string;
@@ -170,4 +170,17 @@ export interface CartItem {
   tax_percent: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface CartWithItems extends Cart {
+  items: (CartItem & { product?: Product })[];
+  summary: CartSummary;
+}
+
+export interface CartSummary {
+  total: number;
+  item_discount: number;
+  bill_discount: number;
+  tax: number;
+  grand_total: number;
 }

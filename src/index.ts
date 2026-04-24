@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import { runMigrations } from './database/migrations/001_initial';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
+import cartRoutes from './routes/carts';
+import saleRoutes from './routes/sales';
+import settingsRoutes from './routes/settings';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +26,9 @@ runMigrations();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/carts', cartRoutes);
+app.use('/api/sales', saleRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
