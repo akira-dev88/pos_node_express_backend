@@ -150,6 +150,22 @@ export interface PurchaseItem {
   updated_at: string;
 }
 
+export interface PurchaseWithRelations extends Purchase {
+  items: (PurchaseItem & { product?: any })[];
+  supplier?: Supplier;
+}
+
+export interface StockLedger {
+  id: number;
+  product_uuid: string;
+  quantity: number;
+  type: 'purchase' | 'sale' | 'adjustment' | 'return';
+  reference_uuid?: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Supplier {
   supplier_uuid: string;
   name: string;
