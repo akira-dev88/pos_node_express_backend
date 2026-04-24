@@ -12,7 +12,8 @@ import settingsRoutes from './routes/settings';
 import customerRoutes from './routes/customers';
 import purchaseRoutes from './routes/purchases';
 import supplierRoutes from './routes/suppliers';
-import reportRoutes from './routes/reports'; // Add this import
+import reportRoutes from './routes/reports';
+import staffRoutes from './routes/staff'; // Add this import
 
 // Load environment variables
 dotenv.config();
@@ -38,7 +39,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/suppliers', supplierRoutes);
-app.use('/api/reports', reportRoutes); // Add this route
+app.use('/api/reports', reportRoutes);
+app.use('/api/staff', staffRoutes); // Add this route
 
 // Health check
 app.get('/health', (req, res) => {
@@ -59,7 +61,8 @@ app.get('/', (req, res) => {
       customers: '/api/customers',
       purchases: '/api/purchases',
       suppliers: '/api/suppliers',
-      reports: '/api/reports'
+      reports: '/api/reports',
+      staff: '/api/staff'
     }
   });
 });
@@ -78,14 +81,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Reports API at http://localhost:${PORT}/api/reports`);
-  console.log(`\n📋 Available Report Endpoints:`);
-  console.log(`   - GET /api/reports/dashboard`);
-  console.log(`   - GET /api/reports/top-products`);
-  console.log(`   - GET /api/reports/stock`);
-  console.log(`   - GET /api/reports/profit`);
-  console.log(`   - GET /api/reports/sales-trend`);
-  console.log(`   - GET /api/reports/profit-trend`);
+  console.log(`👥 Staff API at http://localhost:${PORT}/api/staff`);
 });
 
 export default app;
