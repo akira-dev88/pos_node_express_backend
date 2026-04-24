@@ -1,0 +1,148 @@
+export interface User {
+  user_uuid: string;
+  name: string;
+  email: string;
+  password: string;
+  role: 'owner' | 'cashier' | 'manager';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  product_uuid: string;
+  name: string;
+  barcode?: string;
+  sku?: string;
+  price: number;
+  gst_percent: number;
+  stock: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Customer {
+  customer_uuid: string;
+  name: string;
+  mobile?: string;
+  address?: string;
+  gstin?: string;
+  credit_balance: number;
+  credit_limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Sale {
+  sale_uuid: string;
+  invoice_number: string;
+  customer_uuid?: string;
+  total: number;
+  tax: number;
+  grand_total: number;
+  status: 'completed' | 'refunded' | 'pending';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SaleItem {
+  id: number;
+  sale_uuid: string;
+  product_uuid: string;
+  quantity: number;
+  price: number;
+  tax_percent: number;
+  tax_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: number;
+  sale_uuid: string;
+  method: 'cash' | 'upi' | 'card' | 'credit';
+  amount: number;
+  reference?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Purchase {
+  purchase_uuid: string;
+  total: number;
+  supplier_uuid?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseItem {
+  id: number;
+  purchase_uuid: string;
+  product_uuid: string;
+  quantity: number;
+  cost_price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Supplier {
+  supplier_uuid: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockLedger {
+  id: number;
+  product_uuid: string;
+  quantity: number;
+  type: 'purchase' | 'sale' | 'adjustment' | 'return';
+  reference_uuid?: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerLedger {
+  id: number;
+  customer_uuid: string;
+  type: 'credit' | 'debit' | 'payment';
+  amount: number;
+  reference_uuid?: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Setting {
+  id: number;
+  shop_name: string;
+  mobile?: string;
+  address?: string;
+  gstin?: string;
+  invoice_prefix: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Cart {
+  cart_uuid: string;
+  status: 'active' | 'completed' | 'cancelled';
+  discount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CartItem {
+  id: number;
+  cart_uuid: string;
+  product_uuid: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  tax_percent: number;
+  created_at: string;
+  updated_at: string;
+}
