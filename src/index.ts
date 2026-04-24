@@ -7,6 +7,7 @@ import productRoutes from './routes/products';
 import cartRoutes from './routes/carts';
 import saleRoutes from './routes/sales';
 import settingsRoutes from './routes/settings';
+import customerRoutes from './routes/customers';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/carts', cartRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

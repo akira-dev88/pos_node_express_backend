@@ -382,7 +382,7 @@ export class SaleModel {
   }
 
   // Get sales list with pagination - Pattern matching PHP index
-  static findAll(page: number = 1, limit: number = 50): { sales: Sale[], total: number } {
+  static findAll(page: number = 1, limit: number = 50, filters: any): { sales: Sale[], total: number } {
     const offset = (page - 1) * limit;
     
     const sales = db.prepare(

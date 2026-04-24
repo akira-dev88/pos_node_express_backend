@@ -45,6 +45,8 @@ export interface ProductSearchParams {
 }
 
 
+// Add these to your existing types
+
 export interface Customer {
   customer_uuid: string;
   name: string;
@@ -55,6 +57,45 @@ export interface Customer {
   credit_limit: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface CustomerLedger {
+  id: number;
+  customer_uuid: string;
+  type: 'sale' | 'payment' | 'debit' | 'credit';
+  amount: number;
+  reference_uuid?: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerLedgerWithBalance extends CustomerLedger {
+  balance: number;
+}
+
+export interface CustomerAging {
+  name: string;
+  credit_balance: number;
+  aging: {
+    '0_30': number;
+    '31_60': number;
+    '61_90': number;
+    '90_plus': number;
+  };
+}
+
+export interface CustomerReminder {
+  name: string;
+  mobile?: string;
+  due: number;
+  days: number;
+}
+
+export interface CustomerSummary {
+  total_credit: number;
+  customers_with_credit: number;
+  top_debtors: Array<{ name: string; credit_balance: number }>;
 }
 
 export interface Sale {
@@ -124,17 +165,6 @@ export interface StockLedger {
   product_uuid: string;
   quantity: number;
   type: 'purchase' | 'sale' | 'adjustment' | 'return';
-  reference_uuid?: string;
-  note?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CustomerLedger {
-  id: number;
-  customer_uuid: string;
-  type: 'credit' | 'debit' | 'payment';
-  amount: number;
   reference_uuid?: string;
   note?: string;
   created_at: string;
