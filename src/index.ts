@@ -1,7 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { runMigrations } from './database/migrations/001_initial';
+import { addHsnCode } from './database/migrations/002_hsn';
+import { addAutoPrint } from './database/migrations/003_auto_print';
+import printingRoutes from './routes/printing';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -13,14 +17,25 @@ import customerRoutes from './routes/customers';
 import purchaseRoutes from './routes/purchases';
 import supplierRoutes from './routes/suppliers';
 import reportRoutes from './routes/reports';
-import staffRoutes from './routes/staff'; // Add this import
+import staffRoutes from './routes/staff';
 
-// Load environment variables
+import { LicenseService } from './services/licenseService';
+
+import { scheduleAutoBackup, checkDbIntegrity } from './database/backup';
+
+import attributeRoutes
+from './routes/attributes';
+
+import categoryRoutes
+from './routes/categories';
+
+// Load environment variables - simplified for CommonJS
 dotenv.config();
 
-// Initialize express
-const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Express app
+const app = express();
 
 // Middleware
 app.use(cors());
@@ -29,8 +44,30 @@ app.use(express.urlencoded({ extended: true }));
 
 // Run database migrations
 runMigrations();
+addHsnCode();
+addAutoPrint();
 
-// Routes - matching PHP API structure
+const licensed = LicenseService.isLicensed();
+if (!licensed) {
+  console.log('⚠️ App not licensed');
+  // Don't block server start — let frontend handle it
+  process.env.APP_LICENSED = 'false';
+} else {
+  process.env.APP_LICENSED = 'true';
+}
+
+// After startServer():
+startServer().then(() => {
+  // Check DB integrity on startup
+  const isHealthy = checkDbIntegrity();
+  if (!isHealthy) {
+    console.error('⚠️ DB integrity check failed on startup!');
+  }
+  // Start auto backup schedule
+  scheduleAutoBackup();
+});
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/carts', cartRoutes);
@@ -40,30 +77,30 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/staff', staffRoutes); // Add this route
+app.use('/api/staff', staffRoutes);
+app.use('/api/printing', printingRoutes);
+
+app.use(
+  '/api/attributes',
+  attributeRoutes
+);
+
+app.use(
+  '/api/categories',
+  categoryRoutes
+);
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint with API documentation
-app.get('/', (req, res) => {
-  res.json({ 
+// Root endpoint
+app.get('/api', (req, res) => {
+  res.json({
     message: 'POS Billing API',
     version: '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      products: '/api/products',
-      carts: '/api/carts',
-      sales: '/api/sales',
-      settings: '/api/settings',
-      customers: '/api/customers',
-      purchases: '/api/purchases',
-      suppliers: '/api/suppliers',
-      reports: '/api/reports',
-      staff: '/api/staff'
-    }
+    status: 'running'
   });
 });
 
@@ -78,10 +115,33 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`👥 Staff API at http://localhost:${PORT}/api/staff`);
+// Export startServer function for Electron
+export function startServer(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const server = app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://127.0.0.1:${PORT}`);
+        resolve();
+      });
+      server.on('error', reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Check if running in Electron
+const isElectron = process.env.ELECTRON_RUNNING === 'true';
+// const isMainModule = typeof require !== 'undefined' && require.main === module;
+
+// Only auto-start if:
+// 1. Not in Electron (Electron will call startServer manually)
+// 2. It's the main module
+// if (isMainModule) {
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
+// }
 
 export default app;

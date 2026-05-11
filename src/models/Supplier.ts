@@ -1,5 +1,5 @@
 import db from '../database/connection';
-import { Supplier } from '../types';
+import type { Supplier } from '../types/index';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SupplierModel {

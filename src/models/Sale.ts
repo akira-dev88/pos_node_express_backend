@@ -1,5 +1,5 @@
 import db from '../database/connection';
-import { Sale, SaleItem, Payment, CartWithItems } from '../types';
+import type { Sale, SaleItem, Payment, CartWithItems } from '../types/index';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SaleModel {
@@ -10,7 +10,7 @@ export class SaleModel {
     payments: Array<{ method: string; amount: number; reference?: string }>
   ): { sale: Sale; paid: number; balance: number } {
     const saleUuid = uuidv4();
-    
+
     const transaction = db.transaction(() => {
       let total = 0;
       let taxTotal = 0;
@@ -19,7 +19,7 @@ export class SaleModel {
       for (const item of cartData.items) {
         const itemTotal = item.price * item.quantity;
         const taxAmount = (itemTotal * item.tax_percent) / 100;
-        
+
         total += itemTotal;
         taxTotal += taxAmount;
 
@@ -39,7 +39,7 @@ export class SaleModel {
       }
 
       const grandTotal = total + taxTotal;
-      
+
       // Generate invoice number
       const invoiceNumber = this.generateInvoiceNumber();
 
@@ -68,7 +68,7 @@ export class SaleModel {
 
       for (const item of cartData.items) {
         const itemTaxAmount = (item.price * item.quantity * item.tax_percent) / 100;
-        
+
         insertItem.run(
           saleUuid,
           item.product_uuid,
@@ -104,40 +104,76 @@ export class SaleModel {
       }
 
       const balance = grandTotal - paidAmount;
+      // Update customer credit for Pay Later payments
+      const payLaterAmount = payments
+        .filter(p => p.method === 'pay_later')   // ✅ CORRECT
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-      // Update customer credit if needed
-      if (customerUuid && balance > 0) {
-        // Check credit limit before updating
-        const customer = db.prepare(
-          'SELECT * FROM customers WHERE customer_uuid = ?'
-        ).get(customerUuid) as any;
+      console.log('[BACK] CUSTOMER UUID:', customerUuid);
+      console.log('[BACK] PAY LATER AMOUNT:', payLaterAmount);
 
-        if (customer) {
-          const newBalance = customer.credit_balance + balance;
-          if (customer.credit_limit > 0 && newBalance > customer.credit_limit) {
-            throw new Error('Credit limit exceeded');
-          }
+      if (customerUuid && payLaterAmount > 0) {
+        const customer = db.prepare(`
+          SELECT * FROM customers 
+          WHERE customer_uuid = ?
+        `).get(customerUuid) as any;
 
-          db.prepare(`
-            UPDATE customers 
-            SET credit_balance = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE customer_uuid = ?
-          `).run(newBalance, customerUuid);
+        console.log('[BACK] CUSTOMER BEFORE:', customer);
 
-          // Customer ledger entry
-          db.prepare(`
-            INSERT INTO customer_ledgers (
-              customer_uuid, type, amount, reference_uuid, note
-            ) VALUES (?, 'sale', ?, ?, ?)
-          `).run(
-            customerUuid,
-            grandTotal,
-            saleUuid,
-            `Sale invoice #${invoiceNumber}`
-          );
+        if (!customer) {
+          throw new Error('Customer not found');
         }
+
+        const currentBalance = Number(customer.credit_balance || 0);
+        const creditLimit = Number(customer.credit_limit || 0);
+
+        const newBalance = currentBalance + payLaterAmount;
+
+        console.log('[BACK] NEW BALANCE:', newBalance);
+
+        // Credit limit validation
+        if (creditLimit > 0 && newBalance > creditLimit) {
+          throw new Error('Credit limit exceeded');
+        }
+
+        // Update customer balance
+        const updateResult = db.prepare(`
+          UPDATE customers
+          SET credit_balance = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE customer_uuid = ?
+        `).run(newBalance, customerUuid);
+
+        console.log('[BACK] UPDATE RESULT:', updateResult);
+
+        // Insert ledger entry
+        const ledgerResult = db.prepare(`
+  INSERT INTO customer_ledgers (
+    customer_uuid,
+    type,
+    amount,
+    reference_uuid,
+    note
+  ) VALUES (?, 'debit', ?, ?, ?) 
+`).run(
+          customerUuid,
+          payLaterAmount,
+          saleUuid,
+          `Pay Later invoice #${invoiceNumber}`
+        );
+
+        console.log('[BACK] LEDGER RESULT:', ledgerResult);
+
+        // Verify update immediately
+        const updatedCustomer = db.prepare(`
+          SELECT * FROM customers
+          WHERE customer_uuid = ?
+        `).get(customerUuid);
+
+        console.log('[BACK] CUSTOMER AFTER:', updatedCustomer);
       }
+
+      console.log('PAYMENTS RECEIVED:', payments);
 
       // Mark cart as completed
       db.prepare(`
@@ -147,7 +183,7 @@ export class SaleModel {
       `).run(cartData.cart_uuid);
 
       const sale = db.prepare('SELECT * FROM sales WHERE sale_uuid = ?').get(saleUuid) as Sale;
-      
+
       return { sale, paid: paidAmount, balance };
     });
 
@@ -257,7 +293,7 @@ export class SaleModel {
       }
 
       const sale = db.prepare('SELECT * FROM sales WHERE sale_uuid = ?').get(saleUuid) as Sale;
-      
+
       return { sale, items: itemsData };
     });
 
@@ -276,11 +312,11 @@ export class SaleModel {
     if (!sale) return null;
 
     const items = db.prepare(`
-      SELECT si.*, p.name as product_name
-      FROM sale_items si
-      LEFT JOIN products p ON si.product_uuid = p.product_uuid
-      WHERE si.sale_uuid = ?
-    `).all(saleUuid) as any[];
+  SELECT si.*, p.name as product_name, p.hsn_code
+  FROM sale_items si
+  LEFT JOIN products p ON si.product_uuid = p.product_uuid
+  WHERE si.sale_uuid = ?
+`).all(saleUuid) as any[];
 
     const payments = db.prepare(
       'SELECT method, amount FROM payments WHERE sale_uuid = ?'
@@ -296,17 +332,20 @@ export class SaleModel {
       const price = Number(item.price);
       const qty = Number(item.quantity);
       const taxPercent = Number(item.tax_percent);
-      
+
       const base = price * qty;
       const tax = (base * taxPercent) / 100;
 
       invoiceItems.push({
         name: item.product_name,
+        hsn_code: item.hsn_code || null,
         qty: qty,
         price: price,
         total: Math.round(base * 100) / 100,
         tax_percent: taxPercent,
-        tax_amount: Math.round(tax * 100) / 100
+        tax_amount: Math.round(tax * 100) / 100,
+        cgst: Math.round((tax / 2) * 100) / 100,
+        sgst: Math.round((tax / 2) * 100) / 100
       });
 
       total += base;
@@ -354,7 +393,7 @@ export class SaleModel {
   private static generateInvoiceNumber(): string {
     const setting = db.prepare('SELECT * FROM settings LIMIT 1').get() as any;
     const prefix = setting?.invoice_prefix || 'INV';
-    
+
     // Get last invoice number
     const lastSale = db.prepare(`
       SELECT invoice_number FROM sales 
@@ -382,14 +421,56 @@ export class SaleModel {
   }
 
   // Get sales list with pagination - Pattern matching PHP index
-  static findAll(page: number = 1, limit: number = 50, filters: any): { sales: Sale[], total: number } {
+  // Get sales list with pagination - Pattern matching PHP index
+  static findAll(page: number = 1, limit: number = 50, filters: any): { sales: any[], total: number } {
     const offset = (page - 1) * limit;
-    
-    const sales = db.prepare(
-      'SELECT * FROM sales ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).all(limit, offset) as Sale[];
 
-    const total = (db.prepare('SELECT COUNT(*) as count FROM sales').get() as any).count;
+    // Build WHERE clause from filters
+    let whereClause = '';
+    const params: any[] = [];
+
+    if (filters.startDate && filters.endDate) {
+      whereClause = 'WHERE s.created_at BETWEEN ? AND ?';
+      params.push(filters.startDate, filters.endDate);
+    } else if (filters.startDate) {
+      whereClause = 'WHERE s.created_at >= ?';
+      params.push(filters.startDate);
+    } else if (filters.endDate) {
+      whereClause = 'WHERE s.created_at <= ?';
+      params.push(filters.endDate);
+    }
+
+    if (filters.customerUuid) {
+      whereClause += whereClause ? ' AND s.customer_uuid = ?' : 'WHERE s.customer_uuid = ?';
+      params.push(filters.customerUuid);
+    }
+
+    if (filters.status) {
+      whereClause += whereClause ? ' AND s.status = ?' : 'WHERE s.status = ?';
+      params.push(filters.status);
+    }
+
+    // Main query with customer join
+    const sales = db.prepare(`
+    SELECT s.*, 
+           c.name as customer_name, 
+           c.mobile as customer_mobile
+    FROM sales s
+    LEFT JOIN customers c ON s.customer_uuid = c.customer_uuid
+    ${whereClause}
+    ORDER BY s.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+
+    // Count total with same filters (without limit/offset)
+    const countParams = params.slice(0, -2); // remove limit and offset
+    const countResult = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM sales s
+    ${whereClause}
+  `).get(...countParams) as any;
+
+    const total = countResult?.count || 0;
 
     return { sales, total };
   }
@@ -408,8 +489,8 @@ export class SaleModel {
 
     const payments = db.prepare('SELECT * FROM payments WHERE sale_uuid = ?').all(uuid);
 
-    const customer = sale.customer_uuid ? 
-      db.prepare('SELECT * FROM customers WHERE customer_uuid = ?').get(sale.customer_uuid) : 
+    const customer = sale.customer_uuid ?
+      db.prepare('SELECT * FROM customers WHERE customer_uuid = ?').get(sale.customer_uuid) :
       null;
 
     return {

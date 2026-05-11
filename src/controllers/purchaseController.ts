@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { PurchaseModel } from '../models/Purchase';
 import { SupplierModel } from '../models/Supplier';
-import { AuthRequest } from '../middleware/auth';
+import type { AuthRequest } from '../middleware/auth';
 
 export class PurchaseController {
   // Create new purchase

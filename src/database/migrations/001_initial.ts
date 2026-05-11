@@ -3,7 +3,7 @@ import db from '../connection';
 export function runMigrations(): void {
   console.log('Running migrations...');
 
-  // Create tables - removed all tenant_uuid references
+  // Create tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       user_uuid TEXT PRIMARY KEY,
@@ -28,14 +28,31 @@ export function runMigrations(): void {
 
     CREATE TABLE IF NOT EXISTS products (
       product_uuid TEXT PRIMARY KEY,
+
       name TEXT NOT NULL,
+
+      category_uuid TEXT,
+      subcategory TEXT,
+
       barcode TEXT,
       sku TEXT,
+
+      unit TEXT DEFAULT 'piece',
+
       price REAL NOT NULL,
+      purchase_price REAL DEFAULT 0,
+
       gst_percent REAL NOT NULL DEFAULT 0.00,
-      stock INTEGER NOT NULL DEFAULT 0,
+
+      stock REAL NOT NULL DEFAULT 0,
+
+      hsn_code TEXT,
+      image TEXT,
+
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (category_uuid) REFERENCES categories(category_uuid)
     );
 
     CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
@@ -188,13 +205,60 @@ export function runMigrations(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_uuid);
+
+    CREATE TABLE IF NOT EXISTS categories (
+      category_uuid TEXT PRIMARY KEY,
+
+      name TEXT NOT NULL,
+      parent_uuid TEXT,
+
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (parent_uuid) REFERENCES categories(category_uuid)
+    );
+
+    CREATE TABLE IF NOT EXISTS attributes (
+      attribute_uuid TEXT PRIMARY KEY,
+
+      name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+
+      data_type TEXT NOT NULL,
+
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS category_attributes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      category_uuid TEXT NOT NULL,
+      attribute_uuid TEXT NOT NULL,
+
+      is_required INTEGER DEFAULT 0,
+
+      FOREIGN KEY (category_uuid) REFERENCES categories(category_uuid),
+      FOREIGN KEY (attribute_uuid) REFERENCES attributes(attribute_uuid)
+    );
+
+    CREATE TABLE IF NOT EXISTS product_attributes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      product_uuid TEXT NOT NULL,
+      attribute_uuid TEXT NOT NULL,
+
+      value TEXT,
+
+      FOREIGN KEY (product_uuid) REFERENCES products(product_uuid),
+      FOREIGN KEY (attribute_uuid) REFERENCES attributes(attribute_uuid)
+    );
+
   `);
 
   console.log('Migrations completed successfully!');
 }
 
-// Run migrations if this file is executed directly
-if (require.main === module) {
+if (process.argv[1] && process.argv[1].includes('001_initial')) {
   runMigrations();
+  console.log('Migrations completed. Exiting...');
   process.exit(0);
 }
