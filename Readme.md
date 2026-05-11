@@ -1,3 +1,58 @@
+<!-- PHASE 4 — Purchase System
+
+(VERY IMPORTANT)
+
+Hardware inventory is purchase-heavy.
+
+You need:
+
+supplier
+purchase invoice
+purchase items
+cost price history
+
+You already partially have this.
+
+Now connect it properly. -->
+
+<!-- PHASE 2 — Better Search
+
+(VERY IMPORTANT)
+
+Hardware shops survive on search speed.
+
+You need:
+
+Tokenized search
+
+Example:
+
+3/4 cpvc pipe
+
+Should find:
+
+Ashirvad CPVC Pipe 3/4 inch
+Improve Search Like This
+
+Create:
+
+search_text
+
+column.
+
+Example:
+
+ashirvad cpvc pipe 3/4 inch 10 feet
+
+Then:
+
+LIKE '%cpvc%'
+LIKE '%3/4%'
+
+becomes fast and easy.
+
+This matters MASSIVELY. -->
+
 markdown
 # POS Billing System - API Documentation
 

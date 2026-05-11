@@ -37,6 +37,44 @@ export interface Product {
   attributes?: ProductAttribute[];
 }
 
+export interface ProductUnit {
+
+  unit_uuid: string;
+
+  product_uuid: string;
+
+  unit_name: string;
+
+  conversion_factor: number;
+
+  barcode?: string;
+
+  price?: number;
+
+  purchase_price?: number;
+
+  is_base_unit: number;
+
+  created_at: string;
+}
+
+export interface ProductUnitCreateInput {
+
+  product_uuid: string;
+
+  unit_name: string;
+
+  conversion_factor: number;
+
+  barcode?: string;
+
+  price?: number;
+
+  purchase_price?: number;
+
+  is_base_unit?: number;
+}
+
 export interface ProductAttribute {
   attribute_uuid: string;
 

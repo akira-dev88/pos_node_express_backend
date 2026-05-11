@@ -261,6 +261,30 @@ export function runMigrations(): void {
       REFERENCES attributes(attribute_uuid)
     );
 
+        CREATE TABLE IF NOT EXISTS product_units (
+
+      unit_uuid TEXT PRIMARY KEY,
+
+      product_uuid TEXT NOT NULL,
+
+      unit_name TEXT NOT NULL,
+
+      conversion_factor REAL NOT NULL,
+
+      barcode TEXT,
+
+      price REAL,
+
+      purchase_price REAL,
+
+      is_base_unit INTEGER DEFAULT 0,
+
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (product_uuid)
+      REFERENCES products(product_uuid)
+    );
+
   `);
 
   console.log('Migrations completed successfully!');
