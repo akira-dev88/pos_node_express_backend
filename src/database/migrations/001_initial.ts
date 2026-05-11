@@ -228,18 +228,6 @@ export function runMigrations(): void {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS category_attributes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-      category_uuid TEXT NOT NULL,
-      attribute_uuid TEXT NOT NULL,
-
-      is_required INTEGER DEFAULT 0,
-
-      FOREIGN KEY (category_uuid) REFERENCES categories(category_uuid),
-      FOREIGN KEY (attribute_uuid) REFERENCES attributes(attribute_uuid)
-    );
-
     CREATE TABLE IF NOT EXISTS product_attributes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -250,6 +238,27 @@ export function runMigrations(): void {
 
       FOREIGN KEY (product_uuid) REFERENCES products(product_uuid),
       FOREIGN KEY (attribute_uuid) REFERENCES attributes(attribute_uuid)
+    );
+
+    CREATE TABLE IF NOT EXISTS category_attributes (
+
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      category_uuid TEXT NOT NULL,
+
+      attribute_uuid TEXT NOT NULL,
+
+      is_required INTEGER DEFAULT 0,
+
+      sort_order INTEGER DEFAULT 0,
+
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (category_uuid)
+      REFERENCES categories(category_uuid),
+
+      FOREIGN KEY (attribute_uuid)
+      REFERENCES attributes(attribute_uuid)
     );
 
   `);

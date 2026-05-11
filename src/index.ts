@@ -18,6 +18,8 @@ import purchaseRoutes from './routes/purchases';
 import supplierRoutes from './routes/suppliers';
 import reportRoutes from './routes/reports';
 import staffRoutes from './routes/staff';
+import categoryAttributeRoutes from './routes/categoryAttributes';
+
 
 import { LicenseService } from './services/licenseService';
 
@@ -88,6 +90,11 @@ app.use(
 app.use(
   '/api/categories',
   categoryRoutes
+);
+
+app.use(
+  '/api/category-attributes',
+  categoryAttributeRoutes
 );
 
 // Health check
