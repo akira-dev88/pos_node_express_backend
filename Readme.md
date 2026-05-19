@@ -1073,3 +1073,442 @@ Role	Description	Permissions
 owner	Shop owner/admin	Full access to all features
 manager	Store manager	Sales, reports, product management
 cashier	Counter staff	POS operations, cart checkout
+
+HARDWARE POS - API Flow Documentation
+Base URL
+http://localhost:3000/api/v1
+
+Authentication
+All endpoints require Bearer Token authentication.
+
+text
+Authorization: Bearer <your_token>
+🔄 CHRONOLOGICAL API FLOW
+Phase 1: System Setup (One-time Configuration)
+Before adding any products, you need to set up the foundational data structure.
+
+Step 1.1: Create Attributes
+Define reusable attributes (specifications) that can be assigned to products.
+
+Endpoint: POST /attributes (You'll need to implement this)
+
+json
+// Request Body
+{
+  "name": "Material",
+  "display_name": "Product Material",
+  "data_type": "string"  // string, number, boolean
+}
+json
+// Response (201)
+{
+  "success": true,
+  "data": {
+    "attribute_uuid": "attr-uuid-001",
+    "name": "Material",
+    "display_name": "Product Material",
+    "data_type": "string"
+  }
+}
+Create multiple attributes first:
+
+Material (attr-uuid-001)
+
+Size/Dimension (attr-uuid-002)
+
+Color (attr-uuid-003)
+
+Wattage (attr-uuid-004)
+
+Weight (attr-uuid-005)
+
+Step 1.2: Create Categories
+Organize your product hierarchy.
+
+Endpoint: POST /categories
+
+json
+// Request Body - Parent Category
+{
+  "name": "Hardware"
+}
+json
+// Response (201)
+{
+  "success": true,
+  "data": {
+    "category_uuid": "cat-uuid-hardware",
+    "name": "Hardware",
+    "parent_uuid": null
+  }
+}
+json
+// Request Body - Child Category
+{
+  "name": "Fasteners",
+  "parent_uuid": "cat-uuid-hardware"
+}
+json
+// Response (201)
+{
+  "success": true,
+  "data": {
+    "category_uuid": "cat-uuid-fasteners",
+    "name": "Fasteners",
+    "parent_uuid": "cat-uuid-hardware"
+  }
+}
+View all categories:
+GET /categories
+
+Step 1.3: Assign Attributes to Categories
+Define which attributes belong to which category.
+
+Endpoint: POST /category-attributes
+
+json
+// Assign "Material" to "Fasteners" category
+{
+  "category_uuid": "cat-uuid-fasteners",
+  "attribute_uuid": "attr-uuid-001",
+  "is_required": true,
+  "sort_order": 1
+}
+json
+// Assign "Size" to "Fasteners" category
+{
+  "category_uuid": "cat-uuid-fasteners",
+  "attribute_uuid": "attr-uuid-002",
+  "is_required": true,
+  "sort_order": 2
+}
+json
+// Response (200)
+{
+  "success": true,
+  "message": "Attribute assigned"
+}
+Step 1.4: Fetch Category Attributes (For Product Form)
+When user selects a category, show the relevant attribute fields.
+
+Endpoint: GET /category-attributes/:category_uuid
+
+Example: GET /category-attributes/cat-uuid-fasteners
+
+json
+// Response (200)
+{
+  "success": true,
+  "data": [
+    {
+      "attribute_uuid": "attr-uuid-001",
+      "name": "Material",
+      "display_name": "Product Material",
+      "data_type": "string",
+      "is_required": 1,
+      "sort_order": 1
+    },
+    {
+      "attribute_uuid": "attr-uuid-002",
+      "name": "Size",
+      "display_name": "Dimension",
+      "data_type": "string",
+      "is_required": 1,
+      "sort_order": 2
+    }
+  ]
+}
+Phase 2: Product Management (Daily Operations)
+Step 2.1: Create Product with Attributes
+Add a new product with its category and attributes.
+
+Endpoint: POST /products
+
+json
+// Request Body
+{
+  "name": "Steel Hex Bolt M10 x 50mm",
+  "category_uuid": "cat-uuid-fasteners",
+  "subcategory": "Bolts",
+  "barcode": "8901234567890",
+  "sku": "BLT-M10-050",
+  "unit": "piece",
+  "price": 5.50,
+  "purchase_price": 3.75,
+  "gst_percent": 18,
+  "stock": 500,
+  "hsn_code": "7318",
+  "image": "https://cdn.example.com/bolt-m10.jpg",
+  "attributes": [
+    {
+      "attribute_uuid": "attr-uuid-001",
+      "value": "Stainless Steel 304"
+    },
+    {
+      "attribute_uuid": "attr-uuid-002",
+      "value": "M10 x 50mm"
+    }
+  ]
+}
+json
+// Response (201)
+{
+  "success": true,
+  "data": {
+    "product_uuid": "prod-uuid-001",
+    "name": "Steel Hex Bolt M10 x 50mm",
+    "category_uuid": "cat-uuid-fasteners",
+    "price": 5.50,
+    "stock": 500,
+    "barcode": "8901234567890",
+    "sku": "BLT-M10-050",
+    "attributes": [
+      {
+        "attribute_uuid": "attr-uuid-001",
+        "name": "Material",
+        "value": "Stainless Steel 304"
+      },
+      {
+        "attribute_uuid": "attr-uuid-002",
+        "name": "Size",
+        "value": "M10 x 50mm"
+      }
+    ],
+    "created_at": "2026-05-19T10:30:00.000Z"
+  }
+}
+Step 2.2: Add Multiple Units (Box, Carton, etc.)
+If the product sells in different quantities, add alternative units.
+
+Endpoint: POST /product-units
+
+json
+// Box of 100 pieces
+{
+  "product_uuid": "prod-uuid-001",
+  "unit_name": "Box of 100",
+  "conversion_factor": 100,
+  "barcode": "8901234567906",
+  "price": 500.00,
+  "purchase_price": 350.00,
+  "is_base_unit": 0
+}
+json
+// Response (201)
+{
+  "success": true,
+  "data": {
+    "unit_uuid": "unit-uuid-box100",
+    "unit_name": "Box of 100",
+    "conversion_factor": 100,
+    "price": 500.00
+  }
+}
+Step 2.3: View Product Units
+When viewing a product, fetch all its selling units.
+
+Endpoint: GET /product-units/product/:product_uuid
+
+Example: GET /product-units/product/prod-uuid-001
+
+json
+// Response (200)
+{
+  "success": true,
+  "data": [
+    {
+      "unit_uuid": "unit-uuid-box100",
+      "unit_name": "Box of 100",
+      "conversion_factor": 100,
+      "barcode": "8901234567906",
+      "price": 500.00,
+      "purchase_price": 350.00,
+      "is_base_unit": 0
+    }
+  ]
+}
+Step 2.4: List Products (Inventory Management)
+Main inventory screen with pagination.
+
+Endpoint: GET /products?page=1&limit=20
+
+json
+// Response (200)
+{
+  "success": true,
+  "products": [
+    {
+      "product_uuid": "prod-uuid-001",
+      "name": "Steel Hex Bolt M10 x 50mm",
+      "category_uuid": "cat-uuid-fasteners",
+      "price": 5.50,
+      "stock": 500,
+      "barcode": "8901234567890",
+      "attributes": [...]
+    }
+  ],
+  "total": 1
+}
+Step 2.5: Search Products (Point of Sale / Quick Lookup)
+Barcode scan, SKU lookup, or name search.
+
+Endpoint: GET /products/search?q=bolt
+
+json
+// Response (200)
+{
+  "success": true,
+  "count": 1,
+  "data": [
+    {
+      "product_uuid": "prod-uuid-001",
+      "name": "Steel Hex Bolt M10 x 50mm",
+      "sku": "BLT-M10-050",
+      "barcode": "8901234567890",
+      "price": 5.50,
+      "stock": 500
+    }
+  ]
+}
+Also searches attribute values:
+GET /products/search?q=stainless
+→ Finds all products with "Stainless" in name, SKU, barcode, or attribute values.
+
+Step 2.6: View Single Product
+Product detail page.
+
+Endpoint: GET /products/:uuid
+
+Example: GET /products/prod-uuid-001
+
+json
+// Response (200)
+{
+  "success": true,
+  "data": {
+    "product_uuid": "prod-uuid-001",
+    "name": "Steel Hex Bolt M10 x 50mm",
+    "category_uuid": "cat-uuid-fasteners",
+    "subcategory": "Bolts",
+    "barcode": "8901234567890",
+    "sku": "BLT-M10-050",
+    "unit": "piece",
+    "price": 5.50,
+    "purchase_price": 3.75,
+    "gst_percent": 18,
+    "stock": 500,
+    "hsn_code": "7318",
+    "image": "https://cdn.example.com/bolt-m10.jpg",
+    "attributes": [
+      {
+        "attribute_uuid": "attr-uuid-001",
+        "name": "Material",
+        "value": "Stainless Steel 304"
+      },
+      {
+        "attribute_uuid": "attr-uuid-002",
+        "name": "Size",
+        "value": "M10 x 50mm"
+      }
+    ]
+  }
+}
+Step 2.7: Update Product
+Edit product details or attributes.
+
+Endpoint: PUT /products/:uuid
+
+json
+// Request Body - Update price and replace attributes
+{
+  "price": 6.00,
+  "stock": 600,
+  "attributes": [
+    {
+      "attribute_uuid": "attr-uuid-001",
+      "value": "Stainless Steel 316"
+    },
+    {
+      "attribute_uuid": "attr-uuid-002",
+      "value": "M10 x 50mm"
+    },
+    {
+      "attribute_uuid": "attr-uuid-003",
+      "value": "Silver"
+    }
+  ]
+}
+json
+// Response (200)
+{
+  "success": true,
+  "data": {
+    "product_uuid": "prod-uuid-001",
+    "price": 6.00,
+    "stock": 600,
+    "attributes": [
+      { "name": "Material", "value": "Stainless Steel 316" },
+      { "name": "Size", "value": "M10 x 50mm" },
+      { "name": "Color", "value": "Silver" }
+    ]
+  }
+}
+⚠️ Important: Sending attributes array will completely replace all existing attributes. To keep existing attributes, you must include them in the update request.
+
+Step 2.8: Stock Alert (Dashboard Widget)
+Get products below threshold stock level.
+
+Endpoint: GET /products/low-stock?threshold=10
+
+json
+// Response (200)
+{
+  "success": true,
+  "data": [
+    {
+      "product_uuid": "prod-uuid-002",
+      "name": "Teflon Tape 12mm",
+      "stock": 3,
+      "price": 15.00
+    },
+    {
+      "product_uuid": "prod-uuid-003",
+      "name": "Wall Plug 6mm",
+      "stock": 8,
+      "price": 0.50
+    }
+  ]
+}
+Step 2.9: Delete Product
+Remove product from inventory.
+
+Endpoint: DELETE /products/:uuid
+
+json
+// Response (200)
+{
+  "success": true,
+  "message": "Deleted successfully"
+}
+Step 2.10: Delete Product Unit
+Remove an alternative selling unit.
+
+Endpoint: DELETE /product-units/:uuid
+
+json
+// Response (200)
+{
+  "success": true,
+  "message": "Unit deleted"
+}
+Step 2.11: Delete Category
+Remove a category.
+
+Endpoint: DELETE /categories/:uuid
+
+json
+// Response (200)
+{
+  "success": true,
+  "message": "Category deleted"
+}
