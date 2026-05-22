@@ -1,12 +1,12 @@
 import db from '../database/connection';
-import type { Cart, CartItem, CartWithItems, CartSummary} from '../types/index';
+import type { Cart, CartItem, CartWithItems, CartSummary } from '../types/index';
 import { v4 as uuidv4 } from 'uuid';
 
 export class CartModel {
   // Create new cart
   static create(): Cart {
     const uuid = uuidv4();
-    
+
     const stmt = db.prepare(`
       INSERT INTO carts (cart_uuid, status, discount)
       VALUES (?, 'active', 0.00)
@@ -15,7 +15,7 @@ export class CartModel {
     stmt.run(uuid);
     return this.findById(uuid)!;
   }
-  
+
   // Find cart by UUID
   static findById(uuid: string): Cart | undefined {
     const stmt = db.prepare('SELECT * FROM carts WHERE cart_uuid = ?');
@@ -35,11 +35,17 @@ export class CartModel {
         p.barcode as product_barcode,
         p.sku as product_sku,
         p.gst_percent as product_gst_percent,
-        p.stock as product_stock
+        p.stock as product_stock,
+        pu.unit_name,
+        ci.selected_unit_uuid,
+        ci.converted_quantity
       FROM cart_items ci
-      LEFT JOIN products p ON ci.product_uuid = p.product_uuid
+      LEFT JOIN products p
+      ON ci.product_uuid = p.product_uuid
+      LEFT JOIN product_units pu
+      ON ci.selected_unit_uuid = pu.unit_uuid
       WHERE ci.cart_uuid = ?
-    `).all(uuid) as (CartItem & {
+`).all(uuid) as (CartItem & {
       product_name: string;
       product_barcode: string;
       product_sku: string;
@@ -73,6 +79,7 @@ export class CartModel {
         updated_at: ''
       }
     }));
+
 
     return {
       ...cart,
@@ -110,35 +117,79 @@ export class CartModel {
   }
 
   // Add item to cart
-  static addItem(cartUuid: string, productUuid: string, quantity: number, price: number, taxPercent: number): CartItem {
+  static addItem(
+    cartUuid: string,
+    productUuid: string,
+    selectedUnitUuid: string,
+    quantity: number,
+    convertedQuantity: number,
+    price: number,
+    taxPercent: number
+  ): CartItem {
     // Check if item already exists in cart
     const existingItem = db.prepare(`
       SELECT * FROM cart_items 
-      WHERE cart_uuid = ? AND product_uuid = ?
+      WHERE cart_uuid = ?
+      AND product_uuid = ?
+      AND selected_unit_uuid = ?
     `).get(cartUuid, productUuid) as CartItem | undefined;
 
     if (existingItem) {
-      // Update quantity
-      const newQuantity = existingItem.quantity + quantity;
-      db.prepare(`
-        UPDATE cart_items 
-        SET quantity = ?, 
-            price = ?, 
-            tax_percent = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(newQuantity, price, taxPercent, existingItem.id);
 
-      return db.prepare('SELECT * FROM cart_items WHERE id = ?').get(existingItem.id) as CartItem;
-    } else {
+      const newQuantity =
+        existingItem.quantity + quantity;
+
+      const newConvertedQuantity =
+        existingItem.converted_quantity + convertedQuantity;
+
+      db.prepare(`
+    UPDATE cart_items
+    SET
+      quantity = ?,
+      converted_quantity = ?,
+      price = ?,
+      tax_percent = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+        newQuantity,
+        newConvertedQuantity,
+        price,
+        taxPercent,
+        existingItem.id
+      );
+
+      return db.prepare(
+        'SELECT * FROM cart_items WHERE id = ?'
+      ).get(existingItem.id) as CartItem;
+    }
+    
+    else {
       // Insert new item
       const stmt = db.prepare(`
-        INSERT INTO cart_items (cart_uuid, product_uuid, quantity, price, tax_percent, discount)
-        VALUES (?, ?, ?, ?, ?, 0.00)
+        INSERT INTO cart_items (
+        cart_uuid,
+        product_uuid,
+        selected_unit_uuid,
+        quantity,
+        converted_quantity,
+        price,
+        tax_percent,
+        discount
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0.00)
       `);
 
-      const result = stmt.run(cartUuid, productUuid, quantity, price, taxPercent);
-      
+      const result = stmt.run(
+        cartUuid,
+        productUuid,
+        selectedUnitUuid,
+        quantity,
+        convertedQuantity,
+        price,
+        taxPercent
+      );
+
       return db.prepare('SELECT * FROM cart_items WHERE id = ?').get(result.lastInsertRowid) as CartItem;
     }
   }

@@ -28,7 +28,7 @@ export class SaleModel {
           'SELECT * FROM products WHERE product_uuid = ?'
         ).get(item.product_uuid) as any;
 
-        if (!product || product.stock < item.quantity) {
+        if (!product || product.stock < item.converted_quantity) {
           throw new Error(`Insufficient stock for ${product?.name || 'product'}`);
         }
 
@@ -61,8 +61,14 @@ export class SaleModel {
       // Create sale items
       const insertItem = db.prepare(`
         INSERT INTO sale_items (
-          sale_uuid, product_uuid, quantity, 
-          price, tax_percent, tax_amount
+          sale_uuid, 
+          product_uuid,
+          selected_unit_uuid, 
+          quantity, 
+          converted_quantity,
+          price, 
+          tax_percent, 
+          tax_amount
         ) VALUES (?, ?, ?, ?, ?, ?)
       `);
 
@@ -193,6 +199,7 @@ export class SaleModel {
   // Direct sale (without cart) - Pattern matching PHP createSale
   static createDirectSale(
     items: Array<{
+      converted_quantity: number;
       product_uuid: string;
       quantity: number;
     }>,
@@ -214,9 +221,11 @@ export class SaleModel {
           throw new Error(`Product not found: ${item.product_uuid}`);
         }
 
-        if (product.stock < item.quantity) {
-          throw new Error(`Insufficient stock for ${product.name}`);
-        }
+        if (product.stock < item.converted_quantity) {
+            throw new Error(
+              `Insufficient stock for ${product.name}`
+  );
+}
 
         const quantity = item.quantity;
         const price = product.price;

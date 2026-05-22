@@ -32,9 +32,9 @@ export class PurchaseController {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         
-        if (!item.product_uuid) {
+        if (!item.selected_unit_uuid) {
           res.status(400).json({
-            error: `Item ${i + 1}: product_uuid is required`
+            error: `Item ${i + 1}: selected_unit_uuid is required`
           });
           return;
         }
@@ -57,7 +57,8 @@ export class PurchaseController {
       // Sanitize items
       const sanitizedItems = items.map((item: any) => ({
         product_uuid: String(item.product_uuid),
-        quantity: parseInt(String(item.quantity)),
+        selected_unit_uuid: String(item.selected_unit_uuid),
+        quantity: parseFloat(String(item.quantity)),
         cost_price: parseFloat(String(item.cost_price))
       }));
 
@@ -73,13 +74,13 @@ export class PurchaseController {
       });
     } catch (error: any) {
       console.error('Create purchase error:', error);
-      
+
       // Check for specific error types
       if (error.message && error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
         return;
       }
-      
+
       res.status(500).json({ error: 'Internal server error' });
     }
   };

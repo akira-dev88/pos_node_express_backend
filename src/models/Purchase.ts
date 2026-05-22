@@ -1,13 +1,16 @@
 import db from '../database/connection';
 import type { Purchase, PurchaseItem, PurchaseWithRelations } from '../types/index';
 import { v4 as uuidv4 } from 'uuid';
+import { ProductUnitModel } from './ProductUnit';
 
 export class PurchaseModel {
   // Create purchase with items
   static create(data: {
     supplier_uuid?: string;
     items: Array<{
+      converted_quantity: number;
       product_uuid: string;
+      selected_unit_uuid: string;
       quantity: number;
       cost_price: number;
     }>;
@@ -24,8 +27,15 @@ export class PurchaseModel {
 
       // Process each item
       const insertItem = db.prepare(`
-        INSERT INTO purchase_items (purchase_uuid, product_uuid, quantity, cost_price)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO purchase_items (
+          purchase_uuid,
+          product_uuid,
+          selected_unit_uuid,
+          quantity,
+          converted_quantity,
+          cost_price
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
 
       const updateStock = db.prepare(`
@@ -52,14 +62,42 @@ export class PurchaseModel {
         const quantity = Number(item.quantity);
         const costPrice = Number(item.cost_price);
 
+                  
+        const productUnit = ProductUnitModel.findById(
+          item.selected_unit_uuid
+        );
+
+        if (!productUnit) {
+          throw new Error(
+            `Product unit not found: ${item.selected_unit_uuid}`
+          );
+        }
+
+        const convertedQuantity =
+          quantity * Number(productUnit.conversion_factor);
+
         // Create purchase item
-        insertItem.run(purchaseUuid, item.product_uuid, quantity, costPrice);
+        insertItem.run(
+          purchaseUuid,
+          item.product_uuid,
+          item.selected_unit_uuid,
+          quantity,
+          convertedQuantity,
+          costPrice
+        );
 
         // Update product stock
-        updateStock.run(quantity, item.product_uuid);
+        updateStock.run(
+          item.converted_quantity,
+          item.product_uuid
+        );
 
         // Create stock ledger entry
-        insertStockLedger.run(item.product_uuid, quantity, purchaseUuid);
+        insertStockLedger.run(
+          item.product_uuid,
+          convertedQuantity,
+          purchaseUuid
+        );
 
         // Calculate total
         total += quantity * costPrice;
@@ -94,9 +132,11 @@ export class PurchaseModel {
         pi.*,
         p.name as product_name,
         p.barcode as product_barcode,
-        p.sku as product_sku
+        p.sku as product_sku,
+        pu.unit_name
       FROM purchase_items pi
       LEFT JOIN products p ON pi.product_uuid = p.product_uuid
+      LEFT JOIN product_units pu ON pi.selected_unit_uuid = pu.unit_uuid
       WHERE pi.purchase_uuid = ?
     `).all(uuid) as (PurchaseItem & {
       product_name: string;
@@ -216,7 +256,7 @@ export class PurchaseModel {
 
       // Delete purchase items
       db.prepare('DELETE FROM purchase_items WHERE purchase_uuid = ?').run(uuid);
-      
+
       // Delete purchase
       const result = db.prepare('DELETE FROM purchases WHERE purchase_uuid = ?').run(uuid);
       return result.changes > 0;
