@@ -35,7 +35,7 @@ export class SaleModel {
         // Decrement stock
         db.prepare(
           'UPDATE products SET stock = stock - ?, updated_at = CURRENT_TIMESTAMP WHERE product_uuid = ?'
-        ).run(item.quantity, item.product_uuid);
+        ).run(item.converted_quantity, item.product_uuid);
       }
 
       const grandTotal = total + taxTotal;
@@ -69,7 +69,7 @@ export class SaleModel {
           price, 
           tax_percent, 
           tax_amount
-        ) VALUES (?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const item of cartData.items) {
@@ -78,7 +78,9 @@ export class SaleModel {
         insertItem.run(
           saleUuid,
           item.product_uuid,
+          item.selected_unit_uuid,
           item.quantity,
+          item.converted_quantity,
           item.price,
           item.tax_percent,
           Math.round(itemTaxAmount * 100) / 100
@@ -89,7 +91,7 @@ export class SaleModel {
           INSERT INTO stock_ledgers (
             product_uuid, quantity, type, reference_uuid, note
           ) VALUES (?, ?, 'sale', ?, 'Sale via cart checkout')
-        `).run(item.product_uuid, -item.quantity, saleUuid);
+        `).run(item.product_uuid, item.converted_quantity, saleUuid);
       }
 
       // Create payment records
@@ -109,7 +111,7 @@ export class SaleModel {
         paidAmount += payment.amount;
       }
 
-      const balance = grandTotal - paidAmount;
+      const balance = Math.round((grandTotal - paidAmount) * 100) / 100;
       // Update customer credit for Pay Later payments
       const payLaterAmount = payments
         .filter(p => p.method === 'pay_later')   // ✅ CORRECT

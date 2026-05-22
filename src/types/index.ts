@@ -311,7 +311,7 @@ export interface CartItem {
   id: number;
   cart_uuid: string;
   product_uuid: string;
-  selectedUnitUuid: string;
+  selected_unit_uuid: string;
   quantity: number;
   converted_quantity: number;
   price: number;
