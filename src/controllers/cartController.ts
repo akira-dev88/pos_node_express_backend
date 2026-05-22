@@ -110,6 +110,8 @@ export class CartController {
         String(selected_unit_uuid)
       );
 
+      console.log(productUnit);
+      
       if (!productUnit) {
         res.status(404).json({
           success: false,

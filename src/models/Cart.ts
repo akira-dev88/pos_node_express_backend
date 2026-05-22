@@ -132,7 +132,11 @@ export class CartModel {
       WHERE cart_uuid = ?
       AND product_uuid = ?
       AND selected_unit_uuid = ?
-    `).get(cartUuid, productUuid) as CartItem | undefined;
+    `).get(
+            cartUuid,
+            productUuid,
+            selectedUnitUuid
+          ) as CartItem | undefined;
 
     if (existingItem) {
 
